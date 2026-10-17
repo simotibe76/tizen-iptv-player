@@ -1,0 +1,13 @@
+# Signed packages contain your certificate chain and your TV's DUID: never publish them
+*.wgt
+*.p12
+*.pwd
+*.jks
+
+# Tizen / editor leftovers
+.sign/
+.buildResult/
+.tproject
+.settings/
+.vscode/
+node_modules/

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" version="0.1.0" viewmodes="maximized">
+  <!-- The package id must be 10 letters/digits. Tizen Studio / the VS Code extension
+       generate their own when you create a project: keep yours if you prefer. -->
+  <tizen:application id="IptvPlayer.IptvPlayer" package="IptvPlayer" required_version="2.3"/>
+  <name>IPTV Player</name>
+  <feature name="http://tizen.org/feature/screen.size.normal.1080.1920"/>
+  <icon src="icon.png"/>
+  <content src="index.html"/>
+  <tizen:setting screen-orientation="landscape" context-menu="enable" background-support="disable" encryption="disable" install-location="auto" hwkey-event="enable"/>
+  <tizen:privilege name="http://tizen.org/privilege/internet"/>
+  <tizen:privilege name="http://developer.samsung.com/privilege/avplay"/>
+  <access origin="*" subdomains="true"/>
+</widget>

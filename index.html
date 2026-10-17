@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>IPTVtest</title>
+  <style>
+    html, body { margin: 0; width: 1920px; height: 1080px; background: transparent; overflow: hidden;
+                 color: #fff; font-family: sans-serif; }
+    #list { position: absolute; left: 0; top: 0; width: 760px; height: 1080px; display: none;
+            background: rgba(0, 0, 0, 0.78); padding-top: 30px; box-sizing: border-box; }
+    #head { height: 60px; line-height: 60px; padding: 0 30px; font-size: 30px; color: #9bc4ff;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item { height: 80px; line-height: 80px; padding: 0 30px; font-size: 34px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item.sel { background: #1e5fd0; }
+    .empty { padding: 30px; font-size: 30px; color: #9ab; line-height: 1.4; }
+    #hint { position: absolute; left: 0; right: 0; bottom: 0; height: 60px; line-height: 60px;
+            padding: 0 30px; font-size: 24px; color: #9ab; background: rgba(0, 0, 0, 0.4);
+            white-space: nowrap; overflow: hidden; }
+    #banner { position: absolute; left: 60px; bottom: 60px; max-width: 1500px; padding: 16px 30px;
+              background: rgba(0, 0, 0, 0.75); font-size: 36px; display: none; }
+    #msg { position: absolute; left: 0; right: 0; top: 480px; text-align: center; font-size: 44px;
+           text-shadow: 0 0 8px #000; }
+  </style>
+</head>
+<body>
+  <object id="av-player" type="application/avplayer"
+          style="position:absolute;left:0;top:0;width:1920px;height:1080px;"></object>
+  <div id="list"></div>
+  <div id="banner"></div>
+  <div id="msg">Carico i canali...</div>
+
+  <script src="$WEBAPIS/webapis/webapis.js"></script>
+  <script>
+    var BASE = "https://iptv-org.github.io/iptv/";
+
+    // All'avvio: la tua lista (playlist.m3u nella cartella dell'app) e l'Italia
+    var PLAYLISTS = [
+      { url: "playlist.m3u", defaultGroup: "La mia lista", country: null },
+      { url: BASE + "countries/it.m3u", defaultGroup: "Altri", country: "Italia" }
+    ];
+
+    // Paesi sfogliabili dalla scheda "Paesi" (codice, nome)
+    var COUNTRIES = [
+      ["af", "Afghanistan"],
+      ["al", "Albania"],
+      ["dz", "Algeria"],
+      ["ad", "Andorra"],
+      ["ao", "Angola"],
+      ["ag", "Antigua e Barbuda"],
+      ["ar", "Argentina"],
+      ["am", "Armenia"],
+      ["aw", "Aruba"],
+      ["au", "Australia"],
+      ["at", "Austria"],
+      ["az", "Azerbaigian"],
+      ["bs", "Bahamas"],
+      ["bh", "Bahrein"],
+      ["bd", "Bangladesh"],
+      ["bb", "Barbados"],
+      ["by", "Bielorussia"],
+      ["be", "Belgio"],
+      ["bz", "Belize"],
+      ["bj", "Benin"],
+      ["bt", "Bhutan"],
+      ["bo", "Bolivia"],
+      ["bq", "Bonaire"],
+      ["ba", "Bosnia ed Erzegovina"],
+      ["br", "Brasile"],
+      ["vg", "Isole Vergini Britanniche"],
+      ["bn", "Brunei"],
+      ["bg", "Bulgaria"],
+      ["bf", "Burkina Faso"],
+      ["kh", "Cambogia"],
+      ["cm", "Camerun"],
+      ["ca", "Canada"],
+      ["cv", "Capo Verde"],
+      ["td", "Ciad"],
+      ["cl", "Cile"],
+      ["cn", "Cina"],
+      ["co", "Colombia"],
+      ["km", "Comore"],
+      ["cr", "Costa Rica"],
+      ["hr", "Croazia"],
+      ["cu", "Cuba"],
+      ["cw", "Curaçao"],
+      ["cy", "Cipro"],
+      ["cz", "Repubblica Ceca"],
+      ["cd", "RD del Congo"],
+      ["dk", "Danimarca"],
+      ["do", "Repubblica Dominicana"],
+      ["ec", "Ecuador"],
+      ["eg", "Egitto"],
+      ["sv", "El Salvador"],
+      ["gq", "Guinea Equatoriale"],
+      ["er", "Eritrea"],
+      ["ee", "Estonia"],
+      ["et", "Etiopia"],
+      ["fi", "Finlandia"],
+      ["fr", "Francia"],
+      ["gf", "Guyana Francese"],
+      ["pf", "Polinesia Francese"],
+      ["gm", "Gambia"],
+      ["ge", "Georgia"],
+      ["de", "Germania"],
+      ["gh", "Ghana"],
+      ["gr", "Grecia"],
+      ["gp", "Guadalupa"],
+      ["gu", "Guam"],
+      ["gt", "Guatemala"],
+      ["gg", "Guernsey"],
+      ["gn", "Guinea"],
+      ["gy", "Guyana"],
+      ["ht", "Haiti"],
+      ["hn", "Honduras"],
+      ["hk", "Hong Kong"],
+      ["hu", "Ungheria"],
+      ["is", "Islanda"],
+      ["in", "India"],
+      ["id", "Indonesia"],
+      ["ir", "Iran"],
+      ["iq", "Iraq"],
+      ["ie", "Irlanda"],
+      ["il", "Israele"],
+      ["it", "Italia"],
+      ["ci", "Costa d'Avorio"],
+      ["jm", "Giamaica"],
+      ["jp", "Giappone"],
+      ["jo", "Giordania"],
+      ["kz", "Kazakistan"],
+      ["ke", "Kenya"],
+      ["xk", "Kosovo"],
+      ["kw", "Kuwait"],
+      ["kg", "Kirghizistan"],
+      ["la", "Laos"],
+      ["lv", "Lettonia"],
+      ["lb", "Libano"],
+      ["ly", "Libia"],
+      ["li", "Liechtenstein"],
+      ["lt", "Lituania"],
+      ["lu", "Lussemburgo"],
+      ["mo", "Macao"],
+      ["mg", "Madagascar"],
+      ["my", "Malesia"],
+      ["mv", "Maldive"],
+      ["ml", "Mali"],
+      ["mt", "Malta"],
+      ["mq", "Martinica"],
+      ["mr", "Mauritania"],
+      ["mu", "Mauritius"],
+      ["mx", "Messico"],
+      ["md", "Moldavia"],
+      ["mc", "Monaco"],
+      ["mn", "Mongolia"],
+      ["me", "Montenegro"],
+      ["ma", "Marocco"],
+      ["mz", "Mozambico"],
+      ["mm", "Myanmar"],
+      ["na", "Namibia"],
+      ["np", "Nepal"],
+      ["nl", "Paesi Bassi"],
+      ["nz", "Nuova Zelanda"],
+      ["ni", "Nicaragua"],
+      ["ne", "Niger"],
+      ["ng", "Nigeria"],
+      ["kp", "Corea del Nord"],
+      ["mk", "Macedonia del Nord"],
+      ["no", "Norvegia"],
+      ["om", "Oman"],
+      ["pk", "Pakistan"],
+      ["ps", "Palestina"],
+      ["pa", "Panama"],
+      ["pg", "Papua Nuova Guinea"],
+      ["py", "Paraguay"],
+      ["pe", "Perù"],
+      ["ph", "Filippine"],
+      ["pl", "Polonia"],
+      ["pt", "Portogallo"],
+      ["pr", "Porto Rico"],
+      ["qa", "Qatar"],
+      ["cg", "Repubblica del Congo"],
+      ["re", "Riunione"],
+      ["ro", "Romania"],
+      ["ru", "Russia"],
+      ["rw", "Ruanda"],
+      ["kn", "Saint Kitts e Nevis"],
+      ["lc", "Santa Lucia"],
+      ["vc", "Saint Vincent e Grenadine"],
+      ["ws", "Samoa"],
+      ["sm", "San Marino"],
+      ["sa", "Arabia Saudita"],
+      ["sn", "Senegal"],
+      ["rs", "Serbia"],
+      ["sl", "Sierra Leone"],
+      ["sg", "Singapore"],
+      ["sx", "Sint Maarten"],
+      ["sk", "Slovacchia"],
+      ["si", "Slovenia"],
+      ["so", "Somalia"],
+      ["za", "Sudafrica"],
+      ["kr", "Corea del Sud"],
+      ["es", "Spagna"],
+      ["lk", "Sri Lanka"],
+      ["sd", "Sudan"],
+      ["sr", "Suriname"],
+      ["se", "Svezia"],
+      ["ch", "Svizzera"],
+      ["sy", "Siria"],
+      ["tw", "Taiwan"],
+      ["tj", "Tagikistan"],
+      ["tz", "Tanzania"],
+      ["th", "Thailandia"],
+      ["tg", "Togo"],
+      ["tt", "Trinidad e Tobago"],
+      ["tn", "Tunisia"],
+      ["tr", "Turchia"],
+      ["tm", "Turkmenistan"],
+      ["ug", "Uganda"],
+      ["ua", "Ucraina"],
+      ["ae", "Emirati Arabi Uniti"],
+      ["uk", "Regno Unito"],
+      ["us", "Stati Uniti"],
+      ["uy", "Uruguay"],
+      ["uz", "Uzbekistan"],
+      ["va", "Città del Vaticano"],
+      ["ve", "Venezuela"],
+      ["vn", "Vietnam"],
+      ["eh", "Sahara Occidentale"],
+      ["ye", "Yemen"],
+      ["zw", "Zimbabwe"],
+      ["int", "Internazionale"]
+    ];
+    COUNTRIES.sort(function (a, b) { return a[1].localeCompare(b[1], "it"); });
+
+    var VISIBLE = 11;
+    var LONG_PRESS_MS = 700;
+
+    var channels = [];    // tutti i canali caricati
+    var byUrl = {};       // indirizzo -> canale
+    var countryGroups = {};   // nomi di gruppo che sono paesi
+    var tabs = [];        // Preferiti, Tutti, Paesi, poi i gruppi
+    var tab = 1;          // scheda attiva (1 = Tutti)
+    var favs = {};        // preferiti: indirizzo -> canale
+    var playView = [];    // lista usata per cambiare canale con su/giu
+    var current = -1;     // canale in riproduzione (indice in channels)
+    var cursor = 0;       // voce selezionata nella lista
+    var listOpen = false;
+    var loadingCountry = false;
+    var failStreak = 0;
+    var lastDir = 1;
+    var playToken = 0;
+    var enterDownAt = 0;
+    var swallowEnter = false;
+    var bannerTimer = null, listTimer = null, skipTimer = null;
+
+    var listEl = document.getElementById("list");
+    var bannerEl = document.getElementById("banner");
+    var msgEl = document.getElementById("msg");
+
+    function esc(s) {
+      return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // ---------- Memoria (ultimo canale e preferiti) ----------
+    function store(key, val) {
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {}
+    }
+    function recall(key, def) {
+      try {
+        var v = localStorage.getItem(key);
+        return v === null ? def : JSON.parse(v);
+      } catch (e) { return def; }
+    }
+    function slim(ch) { return { name: ch.name, url: ch.url, logo: ch.logo || "" }; }
+
+    function saveFavs() {
+      var arr = [];
+      for (var u in favs) arr.push(slim(favs[u]));
+      store("fav2", arr);
+    }
+
+    // Aggiunge ai canali un elemento salvato in memoria (se non c'e' gia')
+    function injectStored(item) {
+      if (!item || !item.url) return null;
+      if (byUrl[item.url]) return byUrl[item.url];
+      var c = { name: item.name || item.url, url: item.url, logo: item.logo || "", groups: [] };
+      byUrl[c.url] = c;
+      channels.push(c);
+      return c;
+    }
+
+    // ---------- Playlist ----------
+    function attr(line, name) {
+      var m = new RegExp(name + '="([^"]*)"').exec(line);
+      return m ? m[1] : "";
+    }
+
+    function parseM3U(text, defaultGroup) {
+      var out = [];
+      var lines = text.split(/\r?\n/);
+      var cur = null;
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        if (line.indexOf("#EXTINF") === 0) {
+          var comma = line.indexOf(",", line.lastIndexOf('"') + 1);
+          var groups = attr(line, "group-title").split(";");
+          var g = [];
+          for (var j = 0; j < groups.length; j++) {
+            var gg = groups[j].trim();
+            if (gg) g.push(gg);
+          }
+          if (!g.length) g.push(defaultGroup);
+          cur = {
+            name: comma >= 0 ? line.substring(comma + 1).trim() : "",
+            logo: attr(line, "tvg-logo"),
+            groups: g
+          };
+        } else if (line.charAt(0) !== "#") {
+          if (/^https?:\/\//i.test(line)) {
+            out.push({
+              name: (cur && cur.name) || line,
+              logo: cur ? cur.logo : "",
+              groups: cur ? cur.groups : [defaultGroup],
+              url: line
+            });
+          }
+          cur = null;
+        }
+      }
+      return out;
+    }
+
+    function loadText(url, timeoutMs, done) {
+      var xhr = new XMLHttpRequest();
+      xhr.open("GET", url, true);
+      xhr.timeout = timeoutMs;
+      xhr.onload = function () { done(xhr.responseText || ""); };
+      xhr.onerror = function () { done(""); };
+      xhr.ontimeout = function () { done(""); };
+      xhr.send();
+    }
+
+    // Aggiunge i canali letti da una playlist; se e' di un paese, li mette anche nel gruppo del paese
+    function addParsed(list, countryName) {
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i];
+        var ex = byUrl[c.url];
+        if (ex) {
+          if (countryName && ex.groups.indexOf(countryName) < 0) ex.groups.push(countryName);
+        } else {
+          if (countryName) c.groups.push(countryName);
+          byUrl[c.url] = c;
+          channels.push(c);
+        }
+      }
+    }
+
+    function loadAll(i) {
+      if (i >= PLAYLISTS.length) { startApp(); return; }
+      var p = PLAYLISTS[i];
+      loadText(p.url, 20000, function (t) {
+        if (p.country) countryGroups[p.country] = true;
+        addParsed(parseM3U(t, p.defaultGroup), p.country);
+        loadAll(i + 1);
+      });
+    }
+
+    function buildTabs() {
+      var seen = {}, hasMine = false, countryNames = [], catNames = [];
+      for (var i = 0; i < channels.length; i++) {
+        for (var j = 0; j < channels[i].groups.length; j++) {
+          var g = channels[i].groups[j];
+          if (seen[g]) continue;
+          seen[g] = true;
+          if (g === "La mia lista") hasMine = true;
+          else if (countryGroups[g]) countryNames.push(g);
+          else catNames.push(g);
+        }
+      }
+      var byName = function (a, b) { return a.localeCompare(b); };
+      countryNames.sort(byName);
+      catNames.sort(byName);
+      tabs = [
+        { name: "Preferiti", type: "fav" },
+        { name: "Tutti", type: "all" },
+        { name: "Paesi", type: "countries" }
+      ];
+      if (hasMine) tabs.push({ name: "La mia lista", type: "group" });
+      for (var a = 0; a < countryNames.length; a++) tabs.push({ name: countryNames[a], type: "group" });
+      for (var b = 0; b < catNames.length; b++) tabs.push({ name: catNames[b], type: "group" });
+    }
+
+    function getView() {
+      var t = tabs[tab], out = [], i;
+      if (t.type === "countries") {
+        for (i = 0; i < COUNTRIES.length; i++) out.push(i);
+        return out;
+      }
+      for (i = 0; i < channels.length; i++) {
+        var ch = channels[i];
+        if (t.type === "all" ||
+            (t.type === "fav" && favs[ch.url]) ||
+            (t.type === "group" && ch.groups.indexOf(t.name) >= 0)) out.push(i);
+      }
+      return out;
+    }
+
+    function startApp() {
+      // preferiti e ultimo canale salvati (anche di paesi non caricati ora)
+      var saved = recall("fav2", []);
+      for (var i = 0; i < saved.length; i++) {
+        var c = injectStored(saved[i]);
+        if (c) favs[c.url] = c;
+      }
+      var old = recall("fav", []);   // formato della versione precedente (solo indirizzi)
+      var migrated = false;
+      for (var k = 0; k < old.length; k++) {
+        if (typeof old[k] === "string" && byUrl[old[k]] && !favs[old[k]]) {
+          favs[old[k]] = byUrl[old[k]];
+          migrated = true;
+        }
+      }
+      if (migrated) saveFavs();
+
+      var last = recall("last", null);
+      var lastCh = null;
+      if (last && typeof last === "object") lastCh = injectStored(last);
+      else if (typeof last === "string" && byUrl[last]) lastCh = byUrl[last];
+
+      if (!channels.length) {
+        msgEl.textContent = "Nessun canale trovato. Controlla playlist.m3u e la rete.";
+        return;
+      }
+      msgEl.textContent = "";
+      buildTabs();
+      tab = 1;
+      playView = getView();
+      play(lastCh ? channels.indexOf(lastCh) : 0);
+    }
+
+    // ---------- Paesi ----------
+    function loadCountry(ci) {
+      if (loadingCountry) return;
+      var code = COUNTRIES[ci][0], name = COUNTRIES[ci][1];
+      loadingCountry = true;
+      clearTimeout(listTimer);
+      showBanner("Carico " + name + "...", 40000);
+      loadText(BASE + "countries/" + code + ".m3u", 40000, function (t) {
+        loadingCountry = false;
+        var list = parseM3U(t, "Altri");
+        if (!list.length) {
+          showBanner("Nessun canale per " + name + " (o errore di rete)", 3500);
+          if (listOpen) resetListTimer();
+          return;
+        }
+        countryGroups[name] = true;
+        addParsed(list, name);
+        buildTabs();
+        for (var i = 0; i < tabs.length; i++) {
+          if (tabs[i].type === "group" && tabs[i].name === name) { tab = i; break; }
+        }
+        cursor = 0;
+        showBanner(name + ": " + list.length + " canali", 3000);
+        if (listOpen) { renderList(); resetListTimer(); }
+      });
+    }
+
+    // ---------- Riproduzione ----------
+    function nextIn(idx, dir) {
+      var n = playView.length;
+      if (!n) return idx;
+      var pos = playView.indexOf(idx);
+      if (pos < 0) pos = 0;
+      return playView[(pos + dir + n) % n];
+    }
+
+    function play(idx) {
+      clearTimeout(skipTimer);
+      current = idx;
+      msgEl.textContent = "";
+      showBanner(channels[idx].name, 3000);
+
+      var token = ++playToken;
+      var started = false;
+
+      var fail = function () {
+        if (token !== playToken) return;
+        failStreak++;
+        if (failStreak >= Math.min(channels.length, 15)) {
+          msgEl.textContent = "Nessun canale parte. Premi OK per la lista.";
+          return;
+        }
+        showBanner(channels[idx].name + " non parte, provo il prossimo", 2500);
+        skipTimer = setTimeout(function () { play(nextIn(idx, lastDir)); }, 800);
+      };
+
+      try { webapis.avplay.stop(); } catch (e) {}
+      try { webapis.avplay.close(); } catch (e) {}
+      try {
+        webapis.avplay.open(channels[idx].url);
+        webapis.avplay.setDisplayRect(0, 0, 1920, 1080);
+        webapis.avplay.setListener({
+          onerror: fail,
+          onstreamcompleted: function () { if (token === playToken) play(idx); }
+        });
+        webapis.avplay.prepareAsync(function () {
+          if (token !== playToken) return;
+          started = true;
+          failStreak = 0;
+          store("last", slim(channels[idx]));
+          webapis.avplay.play();
+        }, fail);
+      } catch (e) {
+        fail();
+        return;
+      }
+      setTimeout(function () { if (token === playToken && !started) fail(); }, 12000);
+    }
+
+    // ---------- Interfaccia ----------
+    function showBanner(text, ms) {
+      bannerEl.textContent = text;
+      bannerEl.style.display = "block";
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(function () { bannerEl.style.display = "none"; }, ms);
+    }
+
+    function renderList() {
+      var view = getView();
+      var n = view.length;
+      var t = tabs[tab];
+      var html = '<div id="head">&#9664; ' + esc(t.name) + ' &#9654;' +
+                 (n ? '&nbsp;&nbsp;' + (cursor + 1) + ' / ' + n : '') + '</div>';
+      if (!n) {
+        html += '<div class="empty">Nessun canale qui.' +
+                (t.type === "fav" ? '<br>Tieni premuto OK su un canale per aggiungerlo ai preferiti.' : '') +
+                '</div>';
+      } else {
+        var start = Math.max(0, Math.min(cursor - Math.floor(VISIBLE / 2), n - VISIBLE));
+        for (var i = start; i < Math.min(n, start + VISIBLE); i++) {
+          var label;
+          if (t.type === "countries") {
+            var cname = COUNTRIES[view[i]][1];
+            label = esc(cname) + (countryGroups[cname] ? ' &#10003;' : '');
+          } else {
+            var ch = channels[view[i]];
+            label = (view[i] === current ? '&#9654; ' : '') + (favs[ch.url] ? '&#9733; ' : '') + esc(ch.name);
+          }
+          html += '<div class="item' + (i === cursor ? ' sel' : '') + '">' + label + '</div>';
+        }
+      }
+      html += '<div id="hint">' + (t.type === "countries"
+        ? 'OK carica il paese &middot; &#9664; &#9654; schede'
+        : 'OK guarda &middot; OK lungo: preferito &middot; &#9664; &#9654; schede') + '</div>';
+      listEl.innerHTML = html;
+    }
+
+    function resetListTimer() {
+      clearTimeout(listTimer);
+      listTimer = setTimeout(closeList, 10000);
+    }
+
+    function placeCursor() {
+      if (tabs[tab].type === "countries") { cursor = 0; return; }
+      var p = getView().indexOf(current);
+      cursor = p >= 0 ? p : 0;
+    }
+
+    function openList() {
+      listOpen = true;
+      listEl.style.display = "block";
+      placeCursor();
+      renderList();
+      resetListTimer();
+    }
+
+    function closeList() {
+      listOpen = false;
+      listEl.style.display = "none";
+      clearTimeout(listTimer);
+    }
+
+    function moveCursor(d) {
+      var n = getView().length;
+      if (n) cursor = (cursor + d + n) % n;
+      renderList();
+      resetListTimer();
+    }
+
+    function changeTab(d) {
+      tab = (tab + d + tabs.length) % tabs.length;
+      placeCursor();
+      renderList();
+      resetListTimer();
+    }
+
+    function toggleFav(idx) {
+      var ch = channels[idx];
+      if (favs[ch.url]) { delete favs[ch.url]; showBanner("Tolto dai preferiti", 1500); }
+      else { favs[ch.url] = ch; showBanner("Aggiunto ai preferiti", 1500); }
+      saveFavs();
+      var n = getView().length;
+      if (cursor >= n) cursor = Math.max(0, n - 1);
+      renderList();
+      resetListTimer();
+    }
+
+    function exitApp() {
+      try { webapis.avplay.close(); } catch (e) {}
+      try { tizen.application.getCurrentApplication().exit(); } catch (e) {}
+    }
+
+    document.addEventListener("keydown", function (e) {
+      var k = e.keyCode;
+      if (k === 10009) {                       // Indietro
+        if (listOpen) closeList(); else exitApp();
+        return;
+      }
+      if (!channels.length) return;
+      if (listOpen) {
+        if (k === 38) moveCursor(-1);          // su
+        else if (k === 40) moveCursor(1);      // giu
+        else if (k === 37) changeTab(-1);      // sinistra: scheda precedente
+        else if (k === 39) changeTab(1);       // destra: scheda successiva
+        else if (k === 13 && !enterDownAt && !swallowEnter) enterDownAt = Date.now();
+      } else {
+        if (k === 13) { swallowEnter = true; openList(); }
+        else if (k === 38 || k === 40) {
+          lastDir = (k === 38) ? -1 : 1;
+          failStreak = 0;
+          play(nextIn(current, lastDir));
+        }
+      }
+    });
+
+    document.addEventListener("keyup", function (e) {
+      if (e.keyCode !== 13) return;
+      swallowEnter = false;
+      if (!enterDownAt) return;
+      var held = Date.now() - enterDownAt;
+      enterDownAt = 0;
+      if (!listOpen) return;
+      var view = getView();
+      if (!view.length) return;
+      var idx = view[cursor];
+      if (tabs[tab].type === "countries") {
+        if (held < LONG_PRESS_MS) loadCountry(idx);
+      } else if (held >= LONG_PRESS_MS) {
+        toggleFav(idx);
+      } else {
+        closeList();
+        lastDir = 1;
+        failStreak = 0;
+        playView = view;
+        play(idx);
+      }
+    });
+
+    window.onload = function () { loadAll(0); };
+  </script>
+</body>
+</html>

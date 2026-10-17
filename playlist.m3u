@@ -1,0 +1,6 @@
+#EXTM3U
+# Your own channels go here: they show up in the "La mia lista" tab.
+# Two lines per channel:
+#
+# #EXTINF:-1,Channel name
+# https://example.com/stream.m3u8
